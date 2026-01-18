@@ -1,8 +1,16 @@
 import { Client, Events, GatewayIntentBits } from "discord.js"
-import { joinVoiceChannel, VoiceConnection } from "@discordjs/voice";
+import { joinVoiceChannel, VoiceConnection, entersState, VoiceConnectionStatus } from "@discordjs/voice";
 import 'dotenv/config'
+import { recordVoiceHandler } from "./utils/voiceHandler.js";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+    ],
+});
 
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
@@ -17,6 +25,10 @@ client.once(Events.ClientReady, async (readyClient) => {
         selfDeaf: false,
         selfMute: true
     })
+
+    await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+    recordVoiceHandler(connection);
+
 });
 
 client.login(process.env.DISCORD_BOT_TOKEN);
