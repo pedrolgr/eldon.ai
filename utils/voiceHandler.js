@@ -2,23 +2,24 @@ import { EndBehaviorType } from "@discordjs/voice";
 
 export function recordVoiceHandler(connection) {
     const receiver = connection.receiver;
-    const stream;
-    
+
     receiver.speaking.on('start', (userId) => {
-        
+
         console.log(`User ${userId} is speaking`)
 
-        stream = receiver.subscribe(userId, {
+        const stream = receiver.subscribe(userId, {
             end: {
-            behavior: EndBehaviorType.AfterSilence,
-            duration: 1_000
+                behavior: EndBehaviorType.AfterSilence,
+                duration: 1_000
             }
         })
 
-    });
+        stream.on('data', () => { });
 
-    receiver.speaking.on('end', (userId) => {
-        console.log(`User ${userId} stops speaking`)
-    })
+        stream.on('end', () => {
+            console.log(`User ${userId} parou de falar`);
+        });
+
+    });
 
 }
