@@ -4,3 +4,5 @@ datasets
 huggingface_hub
 librosa
 openai-whisper
+fastapi
+uvicorn

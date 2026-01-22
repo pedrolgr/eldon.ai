@@ -46,9 +46,13 @@ export function recordVoiceHandler(connection: VoiceConnection) {
         });
 
         const decoder = new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 });
+
+        decoder.on("error", (err) => {
+            console.error(`Erro no decodificador Opus para o usuário ${userId}:`, err);
+        });
+
         const audioBuffer = new PassThrough();
 
-        // Feed the decoded audio into the PassThrough buffer
         pipeline(opusStream, decoder, audioBuffer, (err) => {
             if (err && (err as any).code !== "ERR_STREAM_PREMATURE_CLOSE") {
                 console.error(`Erro no pipeline do usuário ${userId}:`, err);
@@ -72,13 +76,11 @@ export function recordVoiceHandler(connection: VoiceConnection) {
                 });
             }
 
-            // Update state for new chunk
             pcmPath = newPcmPath;
             currentOut = createWriteStream(pcmPath);
             audioBuffer.pipe(currentOut);
         };
 
-        // Start first chunk and setup rotation timer
         rotateFile();
         timer = setInterval(rotateFile, 10000);
 
@@ -88,7 +90,6 @@ export function recordVoiceHandler(connection: VoiceConnection) {
                 timer = null;
             }
 
-            // Handle the final chunk
             if (currentOut) {
                 audioBuffer.unpipe(currentOut);
                 const lastPcmPath = pcmPath;
