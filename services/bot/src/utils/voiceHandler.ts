@@ -1,38 +1,6 @@
 import { EndBehaviorType, VoiceReceiver, VoiceConnection } from "@discordjs/voice";
-import { createWriteStream, existsSync, mkdirSync, unlink, WriteStream } from "fs";
-import { PassThrough, pipeline } from "stream";
 import prism from "prism-media";
-import path from "path";
-import ffmpeg from "fluent-ffmpeg";
-import ffmpegPath from "ffmpeg-static";
-
-if (ffmpegPath) {
-    ffmpeg.setFfmpegPath(ffmpegPath);
-}
-
-const recordingsDir = path.join(process.cwd(), "recordings");
-if (!existsSync(recordingsDir)) {
-    mkdirSync(recordingsDir, { recursive: true });
-}
-
-function convertToMp3(pcmPath: string, mp3Path: string) {
-    ffmpeg(pcmPath)
-        .inputFormat("s16le")
-        .inputOptions([
-            "-ar 48000",
-            "-ac 2"
-        ])
-        .toFormat("mp3")
-        .on("end", () => {
-            unlink(pcmPath, (err) => {
-                if (err) console.error(`Erro ao deletar PCM: ${err}`);
-            });
-        })
-        .on("error", (err) => {
-            console.error(`Erro na conversão para MP3: ${err.message}`);
-        })
-        .save(mp3Path);
-}
+import { transcribeAudio } from "./transcribeAudio";
 
 export function recordVoiceHandler(connection: VoiceConnection) {
     const receiver: VoiceReceiver = connection.receiver;
@@ -46,64 +14,78 @@ export function recordVoiceHandler(connection: VoiceConnection) {
         });
 
         const decoder = new prism.opus.Decoder({ rate: 48000, channels: 2, frameSize: 960 });
+        const pcmStream = opusStream.pipe(decoder);
 
-        decoder.on("error", (err) => {
-            console.error(`Erro no decodificador Opus para o usuário ${userId}:`, err);
-        });
+        let chunks: Buffer[] = [];
+        let currentChunkSize = 0;
+        let totalBytes = 0;
+        const BYTES_PER_SECOND = 48000 * 2 * 2; // 48kHz * 2 channels * 16-bit
+        const MAX_BYTES = BYTES_PER_SECOND * 9; // 9 seconds
+        const MIN_BYTES = BYTES_PER_SECOND * 1; // 1 second
 
-        const audioBuffer = new PassThrough();
+        const processAudio = async (buffers: Buffer[], isFinal: boolean) => {
+            if (buffers.length === 0) return;
 
-        pipeline(opusStream, decoder, audioBuffer, (err) => {
-            if (err && (err as any).code !== "ERR_STREAM_PREMATURE_CLOSE") {
-                console.error(`Erro no pipeline do usuário ${userId}:`, err);
-            }
-        });
-
-        let currentOut: WriteStream | null = null;
-        let pcmPath: string = "";
-        let timer: NodeJS.Timeout | null = null;
-
-        const rotateFile = () => {
-            const timestamp = Date.now();
-            const newPcmPath = path.join(recordingsDir, `record-${userId}-${timestamp}.pcm`);
-
-            if (currentOut) {
-                audioBuffer.unpipe(currentOut);
-                const closedPath = pcmPath;
-                currentOut.end(() => {
-                    const mp3Path = closedPath.replace(".pcm", ".mp3");
-                    convertToMp3(closedPath, mp3Path);
-                });
+            if (isFinal && totalBytes < MIN_BYTES) {
+                return;
             }
 
-            pcmPath = newPcmPath;
-            currentOut = createWriteStream(pcmPath);
-            audioBuffer.pipe(currentOut);
+            try {
+                const pcmBuffer = Buffer.concat(buffers);
+                const wavBuffer = createWavBuffer(pcmBuffer);
+                const file = new File([wavBuffer as any], `recording-${userId}-${Date.now()}.wav`, { type: "audio/wav" });
+
+                const text = await transcribeAudio(file);
+                if (text) console.log(`Transcription for ${userId}:`, text);
+            } catch (err) {
+                console.error(`Error processing audio for ${userId}:`, err);
+            }
         };
 
-        rotateFile();
-        timer = setInterval(rotateFile, 10000);
+        pcmStream.on("data", (chunk: Buffer) => {
+            chunks.push(chunk);
+            currentChunkSize += chunk.length;
+            totalBytes += chunk.length;
 
-        opusStream.on("end", () => {
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-            }
-
-            if (currentOut) {
-                audioBuffer.unpipe(currentOut);
-                const lastPcmPath = pcmPath;
-                currentOut.end(() => {
-                    const mp3Path = lastPcmPath.replace(".pcm", ".mp3");
-                    convertToMp3(lastPcmPath, mp3Path);
-                });
-                currentOut = null;
+            if (currentChunkSize >= MAX_BYTES) {
+                processAudio(chunks, false);
+                chunks = [];
+                currentChunkSize = 0;
             }
         });
 
-        opusStream.on("error", (err) => {
-            console.error(`Erro no stream do usuário ${userId}:`, err);
-            if (timer) clearInterval(timer);
+        pcmStream.on("end", async () => {
+            await processAudio(chunks, true);
+        });
+
+        pcmStream.on("error", (err) => {
+            console.error(`Error in PCM stream for ${userId}:`, err);
         });
     });
+}
+
+function createWavBuffer(pcm: Buffer): Buffer {
+    const header = Buffer.alloc(44);
+    const totalDataLen = pcm.length;
+    const sampleRate = 48000;
+    const numChannels = 2;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + totalDataLen, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20); // PCM format
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(totalDataLen, 40);
+
+    return Buffer.concat([header, pcm]);
 }
