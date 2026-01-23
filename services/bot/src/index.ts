@@ -20,6 +20,10 @@ client.once(Events.ClientReady, async (readyClient) => {
     const guild = await client.guilds.fetch('427598872727257088')
     const channel = await guild.channels.fetch('439641078782492672');
 
+    if(channel === null) {
+        return console.error('Guild is null')
+    }
+
     const connection = joinVoiceChannel({
         channelId: channel.id,  
         guildId: guild.id,
