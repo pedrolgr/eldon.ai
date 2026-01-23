@@ -17,8 +17,8 @@ const client = new Client({
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
-    const guild = await client.guilds.fetch('1461935887762980938')
-    const channel = await guild.channels.fetch('1461935888715092024');
+    const guild = await client.guilds.fetch('427598872727257088')
+    const channel = await guild.channels.fetch('439641078782492672');
 
     const connection = joinVoiceChannel({
         channelId: channel.id,  

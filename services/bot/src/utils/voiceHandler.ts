@@ -21,7 +21,7 @@ export function recordVoiceHandler(connection: VoiceConnection) {
         let totalBytes = 0;
         const BYTES_PER_SECOND = 48000 * 2 * 2; // 48kHz * 2 channels * 16-bit
         const MAX_BYTES = BYTES_PER_SECOND * 9; // 9 seconds
-        const MIN_BYTES = BYTES_PER_SECOND * 1; // 1 second
+        const MIN_BYTES = BYTES_PER_SECOND * 0.5; // 0.5 second
 
         const processAudio = async (buffers: Buffer[], isFinal: boolean) => {
             if (buffers.length === 0) return;
