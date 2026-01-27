@@ -1,13 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { Controller, Get, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { request } from 'undici';
+import dotenv from 'dotenv';
+
+dotenv.config()
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
   @Get('/discord/redirect')
-  discordAuthRedirect(@Req() request: Request) {
+  async discordAuthRedirect(@Query('code') code: string) {
+    if(!code) {
+      console.error('No code provided!')
+    }
+
+    return this.authService.handleDiscordRedirect(code);
 
   }
 
