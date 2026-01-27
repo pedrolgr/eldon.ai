@@ -1,9 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { request } from 'undici';
-import dotenv from 'dotenv';
-
-dotenv.config()
 
 @Controller('auth')
 export class AuthController {
@@ -11,12 +7,12 @@ export class AuthController {
 
   @Get('/discord/redirect')
   async discordAuthRedirect(@Query('code') code: string) {
+
     if(!code) {
       console.error('No code provided!')
     }
 
     return this.authService.handleDiscordRedirect(code);
-
+    
   }
-
 }
