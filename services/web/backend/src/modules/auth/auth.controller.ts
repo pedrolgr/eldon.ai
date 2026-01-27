@@ -1,11 +1,14 @@
-import { Controller, Get, Req, Res } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly authService: AuthService) { }
 
-    @Get("/discord/redirect/")
-        discordRedirect(@Req() reqquest: Request){
-            
-        }
+  @Get('/discord/redirect')
+  discordAuthRedirect(@Req() request: Request) {
+
+  }
+
 }
