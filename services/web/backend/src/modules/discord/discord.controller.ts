@@ -1,6 +1,5 @@
 import { Controller, Get, Headers } from '@nestjs/common';
 import { DiscordService } from './discord.service';
-import { Server } from './types/discord-guild.type'
 
 @Controller('discord')
 export class DiscordController {
