@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { request } from 'undici';
+import { Server } from './types/discord-guild.type'
 
 @Injectable()
 export class DiscordService {
@@ -13,12 +14,12 @@ export class DiscordService {
             },
         })
 
-        const servers: any = await body.json();
-        const managedServers = servers.filter(server => {
+        const servers: Server[] = await body.json() as Server[];
+        const managedServers: Server[] = servers.filter(server => {
             const perms = BigInt(server.permissions);
             return server.owner || (perms & 0x20n) === 0x20n;
         });
 
-        console.log(managedServers)
+        return managedServers;
     }
 }
