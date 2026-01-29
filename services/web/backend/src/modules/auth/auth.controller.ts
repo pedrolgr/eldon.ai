@@ -8,11 +8,11 @@ export class AuthController {
   @Get('/discord/redirect')
   async discordAuthRedirect(@Query('code') code: string) {
 
-    if(!code) {
+    if (!code) {
       console.error('No code provided!')
     }
 
     return this.authService.handleDiscordRedirect(code);
-    
+
   }
 }

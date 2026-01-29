@@ -24,14 +24,14 @@ export class AuthService {
             body: payload,
         })
 
-        if(statusCode !== 200) {
+        if (statusCode !== 200) {
             console.error('Error Discord OAuth')
         }
 
         const oAuthData = body.json();
+
         return oAuthData;
 
     }
-
 
 }
