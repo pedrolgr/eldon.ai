@@ -17,8 +17,8 @@ const client = new Client({
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
-    const guild = await client.guilds.fetch('427598872727257088')
-    const channel = await guild.channels.fetch('439641078782492672');
+    const guild = await client.guilds.fetch('380574678634332171')
+    const channel = await guild.channels.fetch('1244377081022906460');
 
     if(channel === null) {
         return console.error('Guild is null')

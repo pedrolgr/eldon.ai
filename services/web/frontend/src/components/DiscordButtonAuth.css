@@ -1,0 +1,88 @@
+.discord-auth-button {
+    /* Layout */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 32px;
+
+    /* Appearance */
+    background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%);
+    border: none;
+    border-radius: 50px;
+
+    /* Typography */
+    font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #FFFFFF;
+
+    /* Effects */
+    box-shadow:
+        0 4px 12px rgba(88, 101, 242, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+
+    /* Prevent text selection */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+}
+
+/* Hover effect */
+.discord-auth-button:hover {
+    background: linear-gradient(135deg, #4752C4 0%, #3c45a5 100%);
+    box-shadow:
+        0 6px 20px rgba(88, 101, 242, 0.4),
+        0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Discord icon styling */
+.discord-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    z-index: 1;
+}
+
+.discord-auth-button:hover .discord-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+/* Button text */
+.discord-button-text {
+    position: relative;
+    z-index: 1;
+    letter-spacing: 0.3px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .discord-auth-button {
+        padding: 12px 24px;
+        font-size: 15px;
+    }
+
+    .discord-icon {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .discord-auth-button {
+        padding: 10px 20px;
+        font-size: 14px;
+        gap: 10px;
+    }
+
+    .discord-icon {
+        width: 20px;
+        height: 20px;
+    }
+}
