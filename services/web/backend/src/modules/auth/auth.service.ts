@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Res } from '@nestjs/common';
 import dotenv from 'dotenv';
 import { request } from 'undici';
 dotenv.config()
@@ -29,7 +29,7 @@ export class AuthService {
         }
 
         const oAuthData = body.json();
-
+        
         return oAuthData;
 
     }
