@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
+import { generateJWT } from 'src/utils/jwt.utils';
 
 interface DiscordOAuthResponse {
   access_token: string;
@@ -24,7 +25,9 @@ export class AuthController {
     try {
       const oAuthData = await this.authService.handleDiscordRedirect(code) as DiscordOAuthResponse;
 
-      res.cookie('discord_token', oAuthData.access_token, {
+      const jwt = generateJWT(oAuthData);
+
+      res.cookie('jwt_token', jwt, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -32,7 +35,7 @@ export class AuthController {
         path: '/',
       });
 
-
+      console.log(oAuthData)
       return res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
 
     } catch (error) {
