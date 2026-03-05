@@ -1,11 +1,14 @@
 import { Injectable, Res } from '@nestjs/common';
 import dotenv from 'dotenv';
 import { request } from 'undici';
+import { JWTService } from './jwt.service';
 
 dotenv.config()
 
 @Injectable()
 export class AuthService {
+    constructor(private readonly jwtService: JWTService) { }
+
     async handleDiscordRedirect(code: string) {
 
         const payload = new URLSearchParams({
@@ -29,10 +32,23 @@ export class AuthService {
             console.error('Error Discord OAuth')
         }
 
-        const oAuthData = body.json();
-        
+        const oAuthData = await body.json();
+
         return oAuthData;
 
     }
 
+    async handleJwtValidation(token: string) {
+        if (!token) {
+            return null;
+        }
+
+        try {
+            const decoded = await this.jwtService.validateJWT(token);
+            return decoded;
+        } catch (error) {
+            console.error('JWT Validation Error:', error);
+            return null;
+        }
+    }
 }

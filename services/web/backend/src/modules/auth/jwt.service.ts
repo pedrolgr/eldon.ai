@@ -14,10 +14,18 @@ export class JWTService {
     async generateJWT(payload: JWTPayload) {
         return jwt.sign(
             {
-                acces_token: payload.access_token
+                access_token: payload.access_token
             },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET as string,
             { expiresIn: payload.expires_in }
         )
+    }
+
+    async validateJWT(token: string) {
+        try {
+            return jwt.verify(token, process.env.JWT_SECRET as string);
+        } catch (error) {
+            throw new Error('Invalid or expired token');
+        }
     }
 }

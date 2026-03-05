@@ -1,5 +1,5 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Get, Query, Res, Req } from '@nestjs/common';
+import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { JWTService } from './jwt.service';
 
@@ -24,8 +24,7 @@ export class AuthController {
 
     try {
       const oAuthData = await this.authService.handleDiscordRedirect(code) as DiscordOAuthResponse;
-      console.log(oAuthData)
-      const jwt = this.jwtService.generateJWT(oAuthData);
+      const jwt = await this.jwtService.generateJWT(oAuthData);
 
       res.cookie('jwt_token', jwt, {
         httpOnly: true,
@@ -41,5 +40,21 @@ export class AuthController {
       console.error(error);
     }
 
+  }
+
+  @Get('/validate')
+  async validateToken(@Req() req: Request, @Res() res: Response) {
+    const token = req.cookies['jwt_token']
+
+    const decodedData = await this.authService.handleJwtValidation(token);
+
+    if (!decodedData) {
+      return res.status(401).json({ message: 'Não autorizado', isValid: false });
+    }
+
+    return res.json({
+      isValid: true,
+      data: decodedData
+    });
   }
 }
