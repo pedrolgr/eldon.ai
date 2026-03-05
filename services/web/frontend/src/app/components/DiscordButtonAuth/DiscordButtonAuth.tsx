@@ -1,13 +1,15 @@
 import './DiscordButtonAuth.css';
+import { useAuth } from '../../hooks/useAuth';
 
 const DiscordButtonAuth: React.FC = () => {
+    const { login } = useAuth();
 
     const handleDiscordLogin = () => {
-
+        login();
     };
 
     return (
-        <div>
+        <div onClick={handleDiscordLogin}>
             <button className="discord-auth-button" onClick={handleDiscordLogin}>
                 <svg
                     className="discord-icon"

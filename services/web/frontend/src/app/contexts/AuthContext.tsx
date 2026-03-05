@@ -1,7 +1,7 @@
-import { createContext, useState, useContext } from "react";
+import { createContext, useState, useEffect } from "react";
+import { validateToken } from "../services/validateToken";
 
 interface AuthContextType {
-    token: string | null;
     isLogged: boolean;
     login: () => void;
     logout: () => void;
@@ -15,8 +15,15 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
     const discordRedirectURl = import.meta.env.VITE_DISCORD_REDIRECT;
+
+    useEffect(() => {
+        validateToken().then((userData) => {
+            if (userData.isValid && userData.data) {
+                setUser(userData.data.access_token);
+            }
+        }).catch(console.error);
+    }, []);
 
     function login(): void {
         window.location.replace(discordRedirectURl)
@@ -24,12 +31,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     function logout(): void {
         setUser(null);
-        setToken(null);
     }
 
     const userInformation: AuthContextType = {
-        token,
-        isLogged: !!token,
+        isLogged: !!user,
         login,
         logout
     }
