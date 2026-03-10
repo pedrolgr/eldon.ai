@@ -5,6 +5,6 @@ export interface DiscordGuild {
     banner: string,
     owner: boolean,
     permissions: number,
-    permissions_mew: string,
+    permissions_new: string,
     features: string[],
 }
