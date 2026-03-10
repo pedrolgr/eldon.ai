@@ -21,6 +21,12 @@ export class DiscordService {
         })
 
         const servers: DiscordGuild[] = await body.json() as DiscordGuild[];
+
+        if (!Array.isArray(servers)) {
+            console.error('Discord API returned unexpected response:', servers);
+            throw new Error('Failed to fetch servers from Discord API');
+        }
+
         const managedServers = servers
             .filter(server => {
                 const perms = BigInt(server.permissions);

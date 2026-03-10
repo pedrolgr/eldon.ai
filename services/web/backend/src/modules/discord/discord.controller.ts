@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res } from '@nestjs/common';
+import { Controller, Get, Req, Res, HttpStatus } from '@nestjs/common';
 import { DiscordService } from './discord.service';
 import type { Response, Request } from 'express';
 
@@ -12,10 +12,11 @@ export class DiscordController {
     const token = req.cookies['jwt_token']
 
     if (!token) {
-      console.error('No access token provided');
+      return res.status(HttpStatus.UNAUTHORIZED).json({ message: 'No JWT token provided' });
     }
 
-    return this.discordService.findAllManagedServers(token);
+    const servers = await this.discordService.findAllManagedServers(token);
+    return res.status(HttpStatus.OK).json(servers);
 
   }
 }
