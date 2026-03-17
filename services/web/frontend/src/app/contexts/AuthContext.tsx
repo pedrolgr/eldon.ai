@@ -1,8 +1,15 @@
 import { createContext, useState, useEffect } from "react";
-import { validateToken } from "../services/validateToken";
+
+interface Servers {
+    id: string;
+    name: string;
+    owner: boolean;
+    icon_url: string | null;
+}
 
 interface AuthContextType {
     isLogged: boolean;
+    servers: Servers[];
     login: () => void;
     logout: () => void;
 }
@@ -15,14 +22,24 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState(null);
+    const [servers, setServers] = useState<Servers[]>([]);
     const discordRedirectURl = import.meta.env.VITE_DISCORD_REDIRECT;
 
     useEffect(() => {
-        validateToken().then((userData) => {
-            if (userData.isValid && userData.data) {
-                setUser(userData.data.access_token);
+        const fetchAll = async () => {
+            try {
+                const response = await fetch('http://localhost:3000/api/discord/servers', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                setServers(data);
+            } catch (error) {
+                console.error("Failed to fetch servers:", error);
             }
-        }).catch(console.error);
+        }
+
+        fetchAll();
+
     }, []);
 
     function login(): void {
@@ -36,7 +53,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const userInformation: AuthContextType = {
         isLogged: !!user,
         login,
-        logout
+        logout,
+        servers,
     }
 
     return (

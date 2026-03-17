@@ -28,4 +28,12 @@ export class JWTService {
             throw new Error('Invalid or expired token');
         }
     }
+
+    decodeJWT(token: string) {
+        const decoded = jwt.decode(token);
+        if (!decoded) {
+            throw new Error('Failed to decode token');
+        }
+        return decoded;
+    }
 }
