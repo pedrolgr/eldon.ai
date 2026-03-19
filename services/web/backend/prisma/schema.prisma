@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  discordId     String   @unique @map("discord_id")
+  username      String
+  email         String?
+  locale        String?
+  verified      Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  lastLoginAt   DateTime @default(now()) @map("last_login_at")
+
+  servers         Server[]
+  serverAdmins    ServerAdmin[]
+  reviewedMessages FlaggedMessage[] @relation("ReviewedBy")
+  
+  @@map("users")
+}
+
+model Server {
+  id              String   @id @default(uuid())
+  ownerId         String   @map("owner_id")
+  discordServerId String   @unique @map("discord_server_id")
+  name            String
+  botActive       Boolean  @default(false) @map("bot_active")
+  botAddedAt      DateTime? @map("bot_added_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  owner           User             @relation(fields: [ownerId], references: [id])
+  admins          ServerAdmin[]
+  botConfig       BotConfig?
+  flaggedMessages FlaggedMessage[]
+
+  @@map("servers")
+}
+
+model ServerAdmin {
+  id             String   @id @default(uuid())
+  serverId       String   @map("server_id")
+  userId         String   @map("user_id")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@map("server_admins")
+}
+
+model BotConfig {
+  id                 String   @id @default(uuid())
+  serverId           String   @unique @map("server_id")
+  discordChannelId   String   @map("discord_channel_id")
+  discordChannelName String?  @map("discord_channel_name")
+  isActive           Boolean  @default(true) @map("is_active")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("bot_config")
+}
+
+model FlaggedMessage {
+  id               String    @id @default(uuid())
+  serverId         String    @map("server_id")
+  discordUserId    String    @map("discord_user_id")
+  discordUsername  String    @map("discord_username")
+  discordChannelId String    @map("discord_channel_id")
+  originalText     String    @map("original_text")
+  reason           String?
+  reviewed         Boolean   @default(false)
+  reviewedById     String?   @map("reviewed_by_id")
+  reviewedAt       DateTime? @map("reviewed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  server     Server  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  reviewedBy User?   @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([serverId])
+  @@index([createdAt])
+  @@index([reviewed])
+  @@map("flagged_messages")
+}
