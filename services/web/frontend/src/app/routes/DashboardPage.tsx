@@ -61,24 +61,46 @@ export function DashboardPage() {
                 Sem foto
               </div>
             )}
-            <h3 style={{ marginTop: "12px", marginBottom: "12px" }}>
-              {server.name}
-            </h3>
-            <Link to={`/dashboard/${server.id}`}>
-              <button
-                type="button"
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #ffffff",
-                  background: "#ffffff",
-                  color: "#000000",
-                  cursor: "pointer",
-                }}
+              <h3 style={{ marginTop: "12px", marginBottom: "12px" }}>
+                {server.name}
+              </h3>
+            {server.isBotActive ? (
+              <Link to={`/dashboard/${server.id}`}>
+                <button
+                  type="button"
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #ffffff",
+                    background: "#ffffff",
+                    color: "#000000",
+                    cursor: "pointer",
+                  }}
+                >
+                  Abrir servidor
+                </button>
+              </Link>
+            ) : (
+              <a
+                href={import.meta.env.VITE_DISCORD_BOT_INSTALL}
+                target="_blank"
+                rel="noreferrer"
               >
-                Abrir servidor
-              </button>
-            </Link>
+                <button
+                  type="button"
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #ffffff",
+                    background: "transparent",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Adicionar bot
+                </button>
+              </a>
+            )}
           </div>
         ))}
       </div>
