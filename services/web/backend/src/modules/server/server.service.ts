@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { FindUserServerDto } from './dto/find-user-server.dto';
 
 @Injectable()
 export class ServerService {
@@ -9,7 +10,6 @@ export class ServerService {
 
   async create(dto: CreateServerDto) {
     try {
-      console.log(dto.name)
       return await this.prisma.server.create({
         data: {
           discordServerId: dto.discordServerId,
@@ -24,8 +24,19 @@ export class ServerService {
 
   }
 
-  findAll() {
-    return `This action returns all server`;
+  async findUserServers(dto: FindUserServerDto) {
+    try {
+      return await this.prisma.server.findMany({
+        where: {
+          id: {
+            in: dto.discordServerId
+          }
+        }
+      })
+
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   findOne(id: number) {
