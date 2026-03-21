@@ -24,12 +24,11 @@ model Server {
   id                 String           @id @default(uuid())
   discordServerId    String           @unique @map("discord_server_id")
   name               String
-  discordChannelId   String           @map("discord_channel_id")
+  discordChannelId   String?          @map("discord_channel_id")
   discordChannelName String?          @map("discord_channel_name")
   botActive          Boolean          @default(false) @map("bot_active")
   botAddedAt         DateTime?        @map("bot_added_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
-  createdAt          DateTime         @default(now()) @map("created_at")
   flaggedMessages    FlaggedMessage[]
 
   @@map("servers")
