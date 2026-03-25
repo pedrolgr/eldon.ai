@@ -10,18 +10,23 @@ export class ServerService {
 
   async create(dto: CreateServerDto) {
     try {
-      return await this.prisma.server.create({
-        data: {
+      return await this.prisma.server.upsert({
+        where: { discordServerId: dto.discordServerId },
+        update: {
+          name: dto.name,
+          botAddedAt: dto.botAddedAt,
+          botActive: true,
+        },
+        create: {
           discordServerId: dto.discordServerId,
           name: dto.name,
           botAddedAt: dto.botAddedAt,
           botActive: true,
-        }
-      })
+        },
+      });
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
-
   }
 
   async findUserServers(dto: FindUserServerDto) {
