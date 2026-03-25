@@ -39,8 +39,39 @@ export class ServerService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} server`;
+  async deactivate(discordServerId: string) {
+    try {
+      return await this.prisma.server.updateMany({
+        where: { discordServerId },
+        data: { botActive: false },
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async findActiveServerIds(): Promise<string[]> {
+    try {
+      const servers = await this.prisma.server.findMany({
+        where: { botActive: true },
+        select: { discordServerId: true },
+      });
+      return servers.map((s) => s.discordServerId);
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  async bulkDeactivate(discordServerIds: string[]) {
+    try {
+      return await this.prisma.server.updateMany({
+        where: { discordServerId: { in: discordServerIds } },
+        data: { botActive: false },
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   update(id: number, updateServerDto: UpdateServerDto) {

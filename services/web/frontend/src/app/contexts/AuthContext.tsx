@@ -55,7 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     if (Array.isArray(apiServers)) {
                         apiServers.forEach((server) => {
                             const serverId = server.discordServerId ?? server.id;
-                            if (serverId) {
+                            if (serverId && server.botActive === true) {
                                 activeServerIds.add(serverId);
                             }
                         });

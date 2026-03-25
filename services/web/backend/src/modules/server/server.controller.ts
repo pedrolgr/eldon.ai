@@ -3,6 +3,8 @@ import { ServerService } from './server.service';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { FindUserServerDto } from './dto/find-user-server.dto';
+import { DeactivateServerDto } from './dto/deactivate-server.dto';
+import { BulkDeactivateServerDto } from './dto/bulk-deactivate-server.dto';
 
 @Controller('server')
 export class ServerController {
@@ -19,9 +21,19 @@ export class ServerController {
     return this.serverService.findUserServers(userServersDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.serverService.findOne(+id);
+  @Get('active')
+  findActiveServerIds() {
+    return this.serverService.findActiveServerIds();
+  }
+
+  @Patch('deactivate')
+  deactivate(@Body() body: DeactivateServerDto) {
+    return this.serverService.deactivate(body.discordServerId);
+  }
+
+  @Patch('bulk-deactivate')
+  bulkDeactivate(@Body() body: BulkDeactivateServerDto) {
+    return this.serverService.bulkDeactivate(body.discordServerIds);
   }
 
   @Patch(':id')

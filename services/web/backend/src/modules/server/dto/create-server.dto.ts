@@ -1,6 +1,5 @@
 import { IsString, IsDate } from 'class-validator';
 
-
 export class CreateServerDto {
 
     @IsString()
