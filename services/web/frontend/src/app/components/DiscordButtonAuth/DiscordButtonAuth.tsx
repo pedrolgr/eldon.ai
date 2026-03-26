@@ -29,7 +29,7 @@ const DiscordButtonAuth: React.FC = () => {
                         </clipPath>
                     </defs>
                 </svg>
-                <span className="discord-button-text">Login com Discord</span>
+                <span className="discord-button-text">Login with Discord</span>
             </button>
         </div>
     );

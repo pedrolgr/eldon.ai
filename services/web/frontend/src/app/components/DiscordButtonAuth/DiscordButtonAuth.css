@@ -4,23 +4,21 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    padding: 14px 32px;
+    padding: var(--spacing-4) var(--spacing-8);
 
     /* Appearance */
-    background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
     border: none;
-    border-radius: 50px;
+    border-radius: var(--radius-full);
 
     /* Typography */
-    font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: #FFFFFF;
+    font-family: var(--font-headline), sans-serif;
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--on-primary);
 
     /* Effects */
-    box-shadow:
-        0 4px 12px rgba(88, 101, 242, 0.3),
-        0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -34,11 +32,13 @@
 
 /* Hover effect */
 .discord-auth-button:hover {
-    background: linear-gradient(135deg, #4752C4 0%, #3c45a5 100%);
-    box-shadow:
-        0 6px 20px rgba(88, 101, 242, 0.4),
-        0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dim) 100%);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transform: translateY(-2px) scale(1.04);
+}
+
+.discord-auth-button:active {
+    transform: scale(0.95);
 }
 
 /* Discord icon styling */
@@ -64,8 +64,8 @@
 /* Responsive design */
 @media (max-width: 768px) {
     .discord-auth-button {
-        padding: 12px 24px;
-        font-size: 15px;
+        padding: var(--spacing-3) var(--spacing-6);
+        font-size: 1rem;
     }
 
     .discord-icon {
@@ -76,8 +76,8 @@
 
 @media (max-width: 480px) {
     .discord-auth-button {
-        padding: 10px 20px;
-        font-size: 14px;
+        padding: var(--spacing-2) var(--spacing-4);
+        font-size: 0.875rem;
         gap: 10px;
     }
 

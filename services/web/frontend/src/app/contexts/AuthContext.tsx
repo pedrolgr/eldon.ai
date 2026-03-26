@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from "react";
+import { validateToken } from "../services/validateToken";
 
 interface Servers {
     id: string;
@@ -29,6 +30,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const baseURL = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
+        let isActive = true;
+
+        const checkAuth = async () => {
+            try {
+                const data = await validateToken();
+                if (!isActive) return;
+
+                if (data?.isValid) {
+                    setUser(data.data ?? {});
+                    return;
+                }
+
+                setUser(null);
+            } catch (error) {
+                if (!isActive) return;
+                setUser(null);
+            }
+        };
+
         const fetchAll = async () => {
             try {
                 const response = await fetch(`${baseURL}/api/discord/servers`, {
@@ -73,8 +93,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
         }
 
+        checkAuth();
         fetchAll();
 
+        return () => {
+            isActive = false;
+        };
     }, []);
 
     function login(): void {
