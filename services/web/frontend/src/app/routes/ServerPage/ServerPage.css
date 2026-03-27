@@ -283,6 +283,18 @@
   align-items: center;
 }
 
+.config-action-btn {
+  min-width: 220px;
+  height: 48px;
+  padding: 0 var(--spacing-6);
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .config-note {
   font-size: 0.85rem;
   color: var(--on-surface-variant);

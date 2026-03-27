@@ -260,10 +260,10 @@ export function ServerPage() {
             </div>
 
             <div className="config-actions">
-              <button className="btn btn-primary" type="button">
+              <button className="btn btn-primary config-action-btn" type="button">
                 Salvar configurações
               </button>
-              <button className="btn btn-secondary" type="button">
+              <button className="btn btn-secondary config-action-btn" type="button">
                 Testar conexão
               </button>
               <span className="config-note">Ação visual apenas. Integração com backend será feita depois.</span>
