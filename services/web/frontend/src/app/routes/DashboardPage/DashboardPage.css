@@ -398,3 +398,102 @@
     margin-left: 0;
   }
 }
+
+/* Locale Dropdown */
+.locale-dropdown {
+  position: relative;
+}
+
+.locale-dropdown summary {
+  list-style: none;
+}
+
+.locale-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.locale-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  background: rgba(36, 20, 56, 0.6);
+  border: 1px solid rgba(84, 63, 102, 0.35);
+  color: var(--on-surface);
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.locale-trigger:hover {
+  transform: translateY(-1px);
+  border-color: rgba(190, 157, 255, 0.5);
+}
+
+.locale-trigger-flag {
+  font-size: 1rem;
+}
+
+.locale-trigger-text {
+  white-space: nowrap;
+}
+
+.locale-chevron {
+  font-size: 1.1rem;
+  color: var(--on-surface-variant);
+}
+
+.locale-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  background: var(--surface-container);
+  border: 1px solid rgba(84, 63, 102, 0.35);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-2);
+  display: grid;
+  gap: var(--spacing-1);
+  min-width: 180px;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+}
+
+.locale-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.locale-item:hover {
+  background: rgba(63, 255, 139, 0.08);
+  border-color: rgba(63, 255, 139, 0.25);
+}
+
+.locale-item-active {
+  background: rgba(63, 255, 139, 0.15);
+  border-color: rgba(63, 255, 139, 0.45);
+  color: var(--secondary);
+}
+
+.locale-item-flag {
+  font-size: 1rem;
+}
+
+.locale-item-text {
+  white-space: nowrap;
+}
