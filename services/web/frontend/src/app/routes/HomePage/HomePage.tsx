@@ -1,7 +1,7 @@
 import './HomePage.css';
 import { Link } from 'react-router';
-import DiscordButtonAuth from '../components/DiscordButtonAuth/DiscordButtonAuth';
-import { useAuth } from '../hooks/useAuth';
+import DiscordButtonAuth from '../../components/DiscordButtonAuth/DiscordButtonAuth';
+import { useAuth } from '../../hooks/useAuth';
 
 export function HomePage() {
   const { isLogged } = useAuth();

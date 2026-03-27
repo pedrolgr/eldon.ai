@@ -95,8 +95,7 @@ client.on(Events.GuildCreate, async (guild) => {
 });
 
 client.on(Events.GuildDelete, async (guild) => {
-    // guild.available === false significa que o servidor ficou indisponivel (outage do Discord)
-    // e NAO que o bot foi removido. Nesse caso, ignoramos o evento.
+
     if (!guild.available) {
         console.log(`[GuildDelete] Guild ${guild.id} became unavailable (outage?), ignoring.`);
         return;
