@@ -1,4 +1,5 @@
 import { FlaggedMessage } from '@prisma/client';
+import { ServerChannel } from '@prisma/client';
 
 export class Server {
     id: string;
@@ -11,4 +12,5 @@ export class Server {
     updatedAt: Date;
     createdAt: Date;
     flaggedMessages: FlaggedMessage[];
+    channels: ServerChannel[];
 }

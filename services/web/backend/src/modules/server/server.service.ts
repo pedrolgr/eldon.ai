@@ -3,6 +3,7 @@ import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindUserServerDto } from './dto/find-user-server.dto';
+import { SyncServerChannelsDto } from './dto/sync-server-channels.dto';
 
 @Injectable()
 export class ServerService {
@@ -76,6 +77,71 @@ export class ServerService {
       });
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  async syncChannels(dto: SyncServerChannelsDto) {
+    try {
+      const server = await this.prisma.server.upsert({
+        where: { discordServerId: dto.discordServerId },
+        update: {
+          name: dto.name,
+          botActive: true,
+        },
+        create: {
+          discordServerId: dto.discordServerId,
+          name: dto.name,
+          botActive: true,
+        },
+      });
+
+      const channels = Array.isArray(dto.channels) ? dto.channels : [];
+      const channelIds = channels.map((channel) => channel.id);
+
+      await this.prisma.$transaction(async (tx) => {
+        if (channelIds.length === 0) {
+          await tx.serverChannel.deleteMany({
+            where: { serverId: server.id },
+          });
+        } else {
+          await tx.serverChannel.deleteMany({
+            where: {
+              serverId: server.id,
+              discordChannelId: { notIn: channelIds },
+            },
+          });
+        }
+
+        for (const channel of channels) {
+          await tx.serverChannel.upsert({
+            where: {
+              serverId_discordChannelId: {
+                serverId: server.id,
+                discordChannelId: channel.id,
+              },
+            },
+            update: {
+              name: channel.name,
+              type: channel.type,
+              position: channel.position ?? null,
+              parentId: channel.parentId ?? null,
+            },
+            create: {
+              serverId: server.id,
+              discordChannelId: channel.id,
+              name: channel.name,
+              type: channel.type,
+              position: channel.position ?? null,
+              parentId: channel.parentId ?? null,
+            },
+          });
+        }
+      });
+
+      return { ok: true, total: channels.length };
+    } catch (e) {
+      console.error(e);
+      return { ok: false };
     }
   }
 

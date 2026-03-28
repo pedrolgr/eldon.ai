@@ -5,6 +5,7 @@ import { UpdateServerDto } from './dto/update-server.dto';
 import { FindUserServerDto } from './dto/find-user-server.dto';
 import { DeactivateServerDto } from './dto/deactivate-server.dto';
 import { BulkDeactivateServerDto } from './dto/bulk-deactivate-server.dto';
+import { SyncServerChannelsDto } from './dto/sync-server-channels.dto';
 
 @Controller('server')
 export class ServerController {
@@ -34,6 +35,11 @@ export class ServerController {
   @Patch('bulk-deactivate')
   bulkDeactivate(@Body() body: BulkDeactivateServerDto) {
     return this.serverService.bulkDeactivate(body.discordServerIds);
+  }
+
+  @Post('channels/sync')
+  syncChannels(@Body() body: SyncServerChannelsDto) {
+    return this.serverService.syncChannels(body);
   }
 
   @Patch(':id')

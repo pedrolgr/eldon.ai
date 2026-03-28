@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { Client, Events, GatewayIntentBits } from "discord.js"
+import { ChannelType, Client, Events, GatewayIntentBits, Guild } from "discord.js"
 import { joinVoiceChannel, VoiceConnection, entersState, VoiceConnectionStatus } from "@discordjs/voice";
 import { recordVoiceHandler } from "./utils/voiceHandler.js";
 
@@ -13,6 +13,8 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
     ],
 });
+
+const VOICE_CHANNEL_TYPES = new Set([ChannelType.GuildVoice, ChannelType.GuildStageVoice]);
 
 async function syncGuildsWithBackend(client: Client): Promise<void> {
     const baseUrl = process.env.GUILD_JOIN_POST_URL;
@@ -58,10 +60,53 @@ async function syncGuildsWithBackend(client: Client): Promise<void> {
     }
 }
 
+async function syncGuildChannelsWithBackend(guild: Guild): Promise<void> {
+    const baseUrl = process.env.GUILD_JOIN_POST_URL;
+
+    if (!baseUrl) {
+        console.warn("[Sync] GUILD_JOIN_POST_URL not set, skipping channel sync.");
+        return;
+    }
+
+    try {
+        const fetchedChannels = await guild.channels.fetch();
+        const channels = fetchedChannels
+            .filter((channel): channel is NonNullable<typeof channel> => Boolean(channel))
+            .filter((channel) => VOICE_CHANNEL_TYPES.has(channel.type))
+            .map((channel) => ({
+                id: channel.id,
+                name: channel.name,
+                type: channel.type,
+                position: "position" in channel ? channel.position : undefined,
+                parentId: "parentId" in channel ? channel.parentId : null,
+            }));
+
+        const response = await fetch(`${baseUrl}/channels/sync`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                discordServerId: guild.id,
+                name: guild.name,
+                channels,
+            }),
+        });
+
+        if (!response.ok) {
+            console.error(`[Sync] Failed to sync channels for ${guild.name} (${response.status})`);
+        }
+    } catch (err) {
+        console.error(`[Sync] Error syncing channels for ${guild.name}:`, err);
+    }
+}
+
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
     await syncGuildsWithBackend(readyClient);
+
+    for (const guild of readyClient.guilds.cache.values()) {
+        await syncGuildChannelsWithBackend(guild);
+    }
 });
 
 
@@ -89,6 +134,8 @@ client.on(Events.GuildCreate, async (guild) => {
         if (!response.ok) {
             console.error(`Failed to post guild join event (${response.status})`);
         }
+
+        await syncGuildChannelsWithBackend(guild);
     } catch (err) {
         console.error("Error posting guild join event:", err);
     }
@@ -127,5 +174,19 @@ client.on(Events.GuildDelete, async (guild) => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.on(Events.ChannelCreate, async (channel) => {
+    if (!("guild" in channel) || !channel.guild) return;
+    await syncGuildChannelsWithBackend(channel.guild);
+});
 
+client.on(Events.ChannelDelete, async (channel) => {
+    if (!("guild" in channel) || !channel.guild) return;
+    await syncGuildChannelsWithBackend(channel.guild);
+});
+
+client.on(Events.ChannelUpdate, async (_oldChannel, newChannel) => {
+    if (!("guild" in newChannel) || !newChannel.guild) return;
+    await syncGuildChannelsWithBackend(newChannel.guild);
+});
+
+client.login(process.env.DISCORD_TOKEN);
