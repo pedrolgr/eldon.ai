@@ -145,6 +145,37 @@ export class ServerService {
     }
   }
 
+  async findChannelsByDiscordServerId(discordServerId: string) {
+    try {
+      const server = await this.prisma.server.findUnique({
+        where: { discordServerId },
+        include: { channels: true },
+      });
+
+      if (!server) {
+        return [];
+      }
+
+      return server.channels
+        .slice()
+        .sort((a, b) => {
+          const positionDelta = (a.position ?? 0) - (b.position ?? 0);
+          if (positionDelta !== 0) return positionDelta;
+          return a.name.localeCompare(b.name);
+        })
+        .map((channel) => ({
+          id: channel.discordChannelId,
+          name: channel.name,
+          type: channel.type,
+          position: channel.position ?? null,
+          parentId: channel.parentId ?? null,
+        }));
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
   update(id: number, updateServerDto: UpdateServerDto) {
     return `This action updates a #${id} server`;
   }

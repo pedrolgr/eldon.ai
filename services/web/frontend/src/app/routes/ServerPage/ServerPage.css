@@ -212,6 +212,51 @@
   font-size: 0.95rem;
 }
 
+.select-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.select-input {
+  appearance: none;
+  width: 100%;
+  padding-left: calc(var(--spacing-8) + var(--spacing-2));
+  padding-right: calc(var(--spacing-8) + var(--spacing-2));
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.select-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--spacing-3);
+  font-size: 1.2rem;
+  color: var(--secondary);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.select-chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--spacing-3);
+  font-size: 1.3rem;
+  color: var(--on-surface-variant);
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: color 0.2s ease;
+}
+
+.select-shell:focus-within .select-chevron {
+  color: var(--primary);
+}
+
+.select-shell.is-loading .select-icon {
+  color: var(--on-surface-variant);
+}
+
 .form-input:focus {
   outline: none;
   border-color: var(--primary);

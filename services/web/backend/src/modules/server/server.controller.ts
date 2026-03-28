@@ -18,7 +18,6 @@ export class ServerController {
 
   @Post('/search')
   findUserServers(@Body() userServersDto: FindUserServerDto) {
-    console.log(userServersDto)
     return this.serverService.findUserServers(userServersDto);
   }
 
@@ -40,6 +39,11 @@ export class ServerController {
   @Post('channels/sync')
   syncChannels(@Body() body: SyncServerChannelsDto) {
     return this.serverService.syncChannels(body);
+  }
+
+  @Get(':discordServerId/channels')
+  findChannels(@Param('discordServerId') discordServerId: string) {
+    return this.serverService.findChannelsByDiscordServerId(discordServerId);
   }
 
   @Patch(':id')

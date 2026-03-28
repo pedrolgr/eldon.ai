@@ -4,6 +4,14 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Link, useParams } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
 
+interface ServerChannel {
+  id: string;
+  name: string;
+  type: number;
+  position?: number | null;
+  parentId?: string | null;
+}
+
 interface ServerFormState {
   name: string;
   discordServerId: string;
@@ -15,6 +23,7 @@ interface ServerFormState {
 export function ServerPage() {
   const { serverId } = useParams();
   const { servers } = useAuth();
+  const baseURL = import.meta.env.VITE_API_URL;
 
   const server = useMemo(() => {
     if (!serverId) return null;
@@ -29,6 +38,10 @@ export function ServerPage() {
     botActive: false,
   });
 
+  const [channels, setChannels] = useState<ServerChannel[]>([]);
+  const [channelsLoading, setChannelsLoading] = useState(false);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!server) return;
     setFormState({
@@ -40,10 +53,56 @@ export function ServerPage() {
     });
   }, [server]);
 
+  useEffect(() => {
+    if (!serverId || !baseURL) return;
+    let isActive = true;
+
+    const fetchChannels = async () => {
+      setChannelsLoading(true);
+      setChannelsError(null);
+      try {
+        const response = await fetch(`${baseURL}/api/server/${serverId}/channels`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch channels");
+        }
+        const data = await response.json();
+        if (!isActive) return;
+        setChannels(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (!isActive) return;
+        console.error("Failed to fetch channels:", error);
+        setChannels([]);
+        setChannelsError("Não foi possível carregar os canais do servidor.");
+      } finally {
+        if (isActive) {
+          setChannelsLoading(false);
+        }
+      }
+    };
+
+    fetchChannels();
+
+    return () => {
+      isActive = false;
+    };
+  }, [baseURL, serverId]);
+
   const handleInputChange = (field: keyof ServerFormState) => (event: ChangeEvent<HTMLInputElement>) => {
     setFormState((prev) => ({
       ...prev,
       [field]: event.target.value,
+    }));
+  };
+
+  const handleChannelSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    const channelId = event.target.value;
+    const selected = channels.find((channel) => channel.id === channelId);
+    setFormState((prev) => ({
+      ...prev,
+      discordChannelId: channelId,
+      discordChannelName: selected?.name ?? "",
     }));
   };
 
@@ -101,6 +160,18 @@ export function ServerPage() {
   const botAddedAtLabel = formState.botActive ? "Aguardando sincronização" : "Ainda não ativado";
   const updatedAtLabel = "Aguardando sincronização";
   const internalIdLabel = "Aguardando sincronização";
+  const channelPlaceholder = channelsLoading
+    ? "Carregando canais..."
+    : channels.length === 0
+      ? "Nenhum canal de voz disponível"
+      : "Selecione um canal de voz";
+  const channelHelperText = channelsLoading
+    ? "Buscando canais de voz sincronizados pelo bot."
+    : channelsError
+      ? channelsError
+      : channels.length === 0
+        ? "Nenhum canal de voz foi encontrado para este servidor."
+        : "Escolha o canal em que o Eldon deve entrar e monitorar.";
 
   return (
     <>
@@ -210,13 +281,25 @@ export function ServerPage() {
 
               <div className="form-field">
                 <label className="form-label" htmlFor="server-channel-name">Nome do canal monitorado</label>
-                <input
-                  id="server-channel-name"
-                  className="form-input"
-                  placeholder="Ex: #geral"
-                  value={formState.discordChannelName}
-                  onChange={handleInputChange("discordChannelName")}
-                />
+                <div className={`select-shell ${channelsLoading ? "is-loading" : ""}`}>
+                  <span className="material-symbols-outlined select-icon" aria-hidden="true">headset_mic</span>
+                  <select
+                    id="server-channel-name"
+                    className="form-input select-input"
+                    value={formState.discordChannelId}
+                    onChange={handleChannelSelect}
+                    disabled={channelsLoading || channels.length === 0}
+                  >
+                    <option value="">{channelPlaceholder}</option>
+                    {channels.map((channel) => (
+                      <option key={channel.id} value={channel.id}>
+                        {channel.name.startsWith("#") ? channel.name : `#${channel.name}`}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="material-symbols-outlined select-chevron" aria-hidden="true">expand_more</span>
+                </div>
+                <span className="form-helper">{channelHelperText}</span>
               </div>
 
               <div className="form-field">
@@ -224,9 +307,9 @@ export function ServerPage() {
                 <input
                   id="server-channel-id"
                   className="form-input"
-                  placeholder="Ex: 123456789012345678"
+                  placeholder="Selecione um canal acima"
                   value={formState.discordChannelId}
-                  onChange={handleInputChange("discordChannelId")}
+                  disabled
                 />
                 <span className="form-helper">Use o ID do canal que será monitorado pelo bot.</span>
               </div>
