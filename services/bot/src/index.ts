@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { ChannelType, Client, Events, GatewayIntentBits, Guild } from "discord.js"
-import { joinVoiceChannel, VoiceConnection, entersState, VoiceConnectionStatus } from "@discordjs/voice";
+import { getVoiceConnection, joinVoiceChannel, VoiceConnection, entersState, VoiceConnectionStatus } from "@discordjs/voice";
 import { recordVoiceHandler } from "./utils/voiceHandler.js";
 
 dotenv.config();
@@ -15,12 +15,104 @@ const client = new Client({
 });
 
 const VOICE_CHANNEL_TYPES = new Set([ChannelType.GuildVoice, ChannelType.GuildStageVoice]);
+const START_COMMAND = '!start';
+const instrumentedConnections = new WeakSet<VoiceConnection>();
 
-async function syncGuildsWithBackend(client: Client): Promise<void> {
+interface ServerSettingsResponse {
+    id: string;
+    name: string;
+    discordServerId: string;
+    discordChannelId: string | null;
+    discordChannelName: string | null;
+    botActive: boolean;
+    botAddedAt: string | null;
+    updatedAt: string;
+}
+
+function getServerApiBaseUrl(): string | null {
     const baseUrl = process.env.GUILD_JOIN_POST_URL;
 
     if (!baseUrl) {
-        console.warn("[Sync] GUILD_JOIN_POST_URL not set, skipping sync.");
+        console.warn("[Config] GUILD_JOIN_POST_URL not set.");
+        return null;
+    }
+
+    return baseUrl;
+}
+
+async function fetchServerSettings(discordServerId: string): Promise<ServerSettingsResponse | null> {
+    const baseUrl = getServerApiBaseUrl();
+
+    if (!baseUrl) {
+        throw new Error('A URL da API nao foi configurada no bot.');
+    }
+
+    const response = await fetch(`${baseUrl}/${discordServerId}`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch server settings (${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as ServerSettingsResponse | null;
+}
+
+async function connectToConfiguredChannel(guild: Guild): Promise<{ channelName: string; reusedConnection: boolean; }> {
+    const settings = await fetchServerSettings(guild.id);
+
+    if (!settings?.discordChannelId) {
+        throw new Error('Nenhum canal foi configurado para este servidor ainda.');
+    }
+
+    const targetChannel = await guild.channels.fetch(settings.discordChannelId);
+
+    if (!targetChannel) {
+        throw new Error('O canal salvo no banco nao foi encontrado neste servidor.');
+    }
+
+    if (!VOICE_CHANNEL_TYPES.has(targetChannel.type)) {
+        throw new Error('O canal salvo no banco nao e um canal de voz valido.');
+    }
+
+    const existingConnection = getVoiceConnection(guild.id);
+    const reusedConnection = existingConnection?.joinConfig.channelId === targetChannel.id;
+
+    if (existingConnection && !reusedConnection) {
+        existingConnection.destroy();
+    }
+
+    const connection = reusedConnection && existingConnection
+        ? existingConnection
+        : joinVoiceChannel({
+            channelId: targetChannel.id,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+            selfDeaf: false,
+        });
+
+    try {
+        await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
+    } catch (error) {
+        connection.destroy();
+        throw new Error('Nao consegui conectar ao canal de voz configurado.');
+    }
+
+    if (!instrumentedConnections.has(connection)) {
+        recordVoiceHandler(connection);
+        instrumentedConnections.add(connection);
+    }
+
+    return {
+        channelName: targetChannel.name,
+        reusedConnection,
+    };
+}
+
+async function syncGuildsWithBackend(client: Client): Promise<void> {
+    const baseUrl = getServerApiBaseUrl();
+
+    if (!baseUrl) {
+        console.warn("[Sync] Server API URL not set, skipping sync.");
         return;
     }
 
@@ -61,10 +153,10 @@ async function syncGuildsWithBackend(client: Client): Promise<void> {
 }
 
 async function syncGuildChannelsWithBackend(guild: Guild): Promise<void> {
-    const baseUrl = process.env.GUILD_JOIN_POST_URL;
+    const baseUrl = getServerApiBaseUrl();
 
     if (!baseUrl) {
-        console.warn("[Sync] GUILD_JOIN_POST_URL not set, skipping channel sync.");
+        console.warn("[Sync] Server API URL not set, skipping channel sync.");
         return;
     }
 
@@ -187,6 +279,32 @@ client.on(Events.ChannelDelete, async (channel) => {
 client.on(Events.ChannelUpdate, async (_oldChannel, newChannel) => {
     if (!("guild" in newChannel) || !newChannel.guild) return;
     await syncGuildChannelsWithBackend(newChannel.guild);
+});
+
+client.on(Events.MessageCreate, async (message) => {
+    if (message.author.bot || !message.inGuild()) {
+        return;
+    }
+
+    if (message.content.trim().toLowerCase() !== START_COMMAND) {
+        return;
+    }
+
+    try {
+        const { channelName, reusedConnection } = await connectToConfiguredChannel(message.guild);
+        const reply = reusedConnection
+            ? `Ja estou conectado ao canal de voz ${channelName}.`
+            : `Entrei no canal de voz ${channelName}.`;
+
+        await message.reply(reply);
+    } catch (error) {
+        console.error(`[Start] Failed to connect in guild ${message.guild.id}:`, error);
+        const reply = error instanceof Error
+            ? error.message
+            : 'Nao consegui entrar no canal configurado.';
+
+        await message.reply(reply);
+    }
 });
 
 client.login(process.env.DISCORD_TOKEN);

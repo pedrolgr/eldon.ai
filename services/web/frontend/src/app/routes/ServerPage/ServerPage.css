@@ -345,6 +345,19 @@
   color: var(--on-surface-variant);
 }
 
+.config-feedback {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+}
+
+.config-feedback.is-success {
+  color: var(--secondary);
+}
+
+.config-feedback.is-error {
+  color: #ff9b9b;
+}
+
 .flagged-card {
   padding: var(--spacing-8);
   border-radius: var(--radius-md);

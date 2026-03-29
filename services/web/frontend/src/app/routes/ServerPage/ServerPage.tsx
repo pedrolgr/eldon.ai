@@ -20,6 +20,28 @@ interface ServerFormState {
   botActive: boolean;
 }
 
+interface PersistedServerSettings {
+  id: string;
+  name: string;
+  discordServerId: string;
+  discordChannelId: string | null;
+  discordChannelName: string | null;
+  botActive: boolean;
+  botAddedAt: string | null;
+  updatedAt: string;
+}
+
+type SaveStatus = "idle" | "saving" | "success" | "error";
+
+function formatDateTime(value: string | null) {
+  if (!value) return "Ainda não disponível";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function ServerPage() {
   const { serverId } = useParams();
   const { servers } = useAuth();
@@ -41,6 +63,11 @@ export function ServerPage() {
   const [channels, setChannels] = useState<ServerChannel[]>([]);
   const [channelsLoading, setChannelsLoading] = useState(false);
   const [channelsError, setChannelsError] = useState<string | null>(null);
+  const [savedSettings, setSavedSettings] = useState<PersistedServerSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!server) return;
@@ -52,6 +79,54 @@ export function ServerPage() {
       botActive: server.isBotActive,
     });
   }, [server]);
+
+  useEffect(() => {
+    if (!serverId || !baseURL || !server) return;
+    let isActive = true;
+
+    const fetchServerSettings = async () => {
+      setSettingsLoading(true);
+      setSettingsError(null);
+
+      try {
+        const response = await fetch(`${baseURL}/api/server/${serverId}`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch server settings");
+        }
+
+        const data = (await response.json()) as PersistedServerSettings | null;
+        if (!isActive) return;
+
+        setSavedSettings(data);
+        setFormState({
+          name: data?.name ?? server.name,
+          discordServerId: data?.discordServerId ?? server.id,
+          discordChannelId: data?.discordChannelId ?? "",
+          discordChannelName: data?.discordChannelName ?? "",
+          botActive: data?.botActive ?? server.isBotActive,
+        });
+      } catch (error) {
+        if (!isActive) return;
+
+        console.error("Failed to fetch server settings:", error);
+        setSavedSettings(null);
+        setSettingsError("Não foi possível carregar as configurações salvas do servidor.");
+      } finally {
+        if (isActive) {
+          setSettingsLoading(false);
+        }
+      }
+    };
+
+    fetchServerSettings();
+
+    return () => {
+      isActive = false;
+    };
+  }, [baseURL, server, serverId]);
 
   useEffect(() => {
     if (!serverId || !baseURL) return;
@@ -89,16 +164,11 @@ export function ServerPage() {
     };
   }, [baseURL, serverId]);
 
-  const handleInputChange = (field: keyof ServerFormState) => (event: ChangeEvent<HTMLInputElement>) => {
-    setFormState((prev) => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
-  };
-
   const handleChannelSelect = (event: ChangeEvent<HTMLSelectElement>) => {
     const channelId = event.target.value;
     const selected = channels.find((channel) => channel.id === channelId);
+    setSaveStatus("idle");
+    setSaveMessage(null);
     setFormState((prev) => ({
       ...prev,
       discordChannelId: channelId,
@@ -106,11 +176,67 @@ export function ServerPage() {
     }));
   };
 
-  const toggleBotActive = () => {
-    setFormState((prev) => ({
-      ...prev,
-      botActive: !prev.botActive,
-    }));
+  const handleSaveSettings = async () => {
+    if (!serverId || !baseURL) {
+      setSaveStatus("error");
+      setSaveMessage("A API do projeto não está configurada.");
+      return;
+    }
+
+    setSaveStatus("saving");
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`${baseURL}/api/server/${serverId}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          name: formState.name,
+          discordChannelId: formState.discordChannelId || null,
+          discordChannelName: formState.discordChannelName || null,
+        }),
+      });
+
+      const data = (await response.json().catch(() => null)) as PersistedServerSettings | { message?: string } | null;
+
+      if (!response.ok) {
+        const message = data && typeof data === "object" && "message" in data && typeof data.message === "string"
+          ? data.message
+          : "Não foi possível salvar as configurações do servidor.";
+
+        throw new Error(message);
+      }
+
+      const nextSettings = data as PersistedServerSettings;
+
+      setSavedSettings(nextSettings);
+      setSettingsError(null);
+      setFormState((prev) => ({
+        ...prev,
+        name: nextSettings.name ?? prev.name,
+        discordServerId: nextSettings.discordServerId ?? prev.discordServerId,
+        discordChannelId: nextSettings.discordChannelId ?? "",
+        discordChannelName: nextSettings.discordChannelName ?? "",
+        botActive: nextSettings.botActive,
+      }));
+      setSaveStatus("success");
+      setSaveMessage(
+        nextSettings.discordChannelId
+          ? "Canal monitorado salvo com sucesso."
+          : "Configuração do canal removida com sucesso.",
+      );
+    } catch (error) {
+      console.error("Failed to save server settings:", error);
+      setSaveStatus("error");
+      setSaveMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar as configurações do servidor.",
+      );
+    }
   };
 
   const renderState = (title: string, subtitle: string) => (
@@ -157,9 +283,22 @@ export function ServerPage() {
 
   const statusLabel = formState.botActive ? "Bot ativo" : "Bot inativo";
   const statusClass = formState.botActive ? "active" : "inactive";
-  const botAddedAtLabel = formState.botActive ? "Aguardando sincronização" : "Ainda não ativado";
-  const updatedAtLabel = "Aguardando sincronização";
-  const internalIdLabel = "Aguardando sincronização";
+  const botAddedAtLabel = savedSettings?.botAddedAt
+    ? formatDateTime(savedSettings.botAddedAt)
+    : formState.botActive
+      ? "Aguardando sincronização"
+      : "Ainda não ativado";
+  const updatedAtLabel = savedSettings?.updatedAt
+    ? formatDateTime(savedSettings.updatedAt)
+    : "Nenhuma alteração salva";
+  const internalIdLabel = savedSettings?.id ?? "Será criado ao salvar";
+  const isSaving = saveStatus === "saving";
+  const feedbackIsError = saveStatus === "error" || (!!settingsError && !saveMessage);
+  const saveFeedbackClass = feedbackIsError
+    ? "config-feedback is-error"
+    : saveStatus === "success"
+      ? "config-feedback is-success"
+      : "config-feedback";
   const channelPlaceholder = channelsLoading
     ? "Carregando canais..."
     : channels.length === 0
@@ -262,7 +401,6 @@ export function ServerPage() {
                   id="server-name"
                   className="form-input"
                   value={formState.name}
-                  onChange={handleInputChange("name")}
                   disabled
                 />
                 <span className="form-helper">Sincronizado com o Discord.</span>
@@ -274,7 +412,6 @@ export function ServerPage() {
                   id="server-discord-id"
                   className="form-input"
                   value={formState.discordServerId}
-                  onChange={handleInputChange("discordServerId")}
                   disabled
                 />
               </div>
@@ -288,7 +425,7 @@ export function ServerPage() {
                     className="form-input select-input"
                     value={formState.discordChannelId}
                     onChange={handleChannelSelect}
-                    disabled={channelsLoading || channels.length === 0}
+                    disabled={channelsLoading || settingsLoading || channels.length === 0}
                   >
                     <option value="">{channelPlaceholder}</option>
                     {channels.map((channel) => (
@@ -320,18 +457,6 @@ export function ServerPage() {
             <h2 className="config-title">Status e acionamento do bot</h2>
             <div className="form-grid">
               <div className="form-field">
-                <label className="form-label">Bot ativo</label>
-                <label className="toggle">
-                  <input type="checkbox" checked={formState.botActive} onChange={toggleBotActive} />
-                  <span className="toggle-track"></span>
-                  <span className="toggle-text">
-                    {formState.botActive ? "Monitoramento ativo" : "Monitoramento pausado"}
-                  </span>
-                </label>
-                <span className="form-helper">Ative para que o Eldon monitore as mensagens de voz.</span>
-              </div>
-
-              <div className="form-field">
                 <label className="form-label">Bot adicionado em</label>
                 <input className="form-input" value={botAddedAtLabel} disabled />
               </div>
@@ -343,14 +468,19 @@ export function ServerPage() {
             </div>
 
             <div className="config-actions">
-              <button className="btn btn-primary config-action-btn" type="button">
-                Salvar configurações
+              <button
+                className="btn btn-primary config-action-btn"
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={isSaving || settingsLoading || channelsLoading}
+              >
+                {isSaving ? "Salvando..." : "Salvar configurações"}
               </button>
-              <button className="btn btn-secondary config-action-btn" type="button">
-                Testar conexão
-              </button>
-              <span className="config-note">Ação visual apenas. Integração com backend será feita depois.</span>
             </div>
+            <span className="config-note">
+              Depois de salvar, use o comando <code>!start</code> no servidor para o bot entrar no canal de voz
+              configurado.
+            </span>
           </div>
         </section>
 

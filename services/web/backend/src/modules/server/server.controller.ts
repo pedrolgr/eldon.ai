@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ServerService } from './server.service';
 import { CreateServerDto } from './dto/create-server.dto';
-import { UpdateServerDto } from './dto/update-server.dto';
 import { FindUserServerDto } from './dto/find-user-server.dto';
 import { DeactivateServerDto } from './dto/deactivate-server.dto';
 import { BulkDeactivateServerDto } from './dto/bulk-deactivate-server.dto';
 import { SyncServerChannelsDto } from './dto/sync-server-channels.dto';
+import { UpdateServerSettingsDto } from './dto/update-server-settings.dto';
 
 @Controller('server')
 export class ServerController {
@@ -46,9 +46,17 @@ export class ServerController {
     return this.serverService.findChannelsByDiscordServerId(discordServerId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateServerDto: UpdateServerDto) {
-    return this.serverService.update(+id, updateServerDto);
+  @Get(':discordServerId')
+  findOne(@Param('discordServerId') discordServerId: string) {
+    return this.serverService.findByDiscordServerId(discordServerId);
+  }
+
+  @Patch(':discordServerId/settings')
+  updateSettings(
+    @Param('discordServerId') discordServerId: string,
+    @Body() updateServerSettingsDto: UpdateServerSettingsDto,
+  ) {
+    return this.serverService.updateSettings(discordServerId, updateServerSettingsDto);
   }
 
   @Delete(':id')

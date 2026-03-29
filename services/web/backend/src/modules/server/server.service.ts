@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { CreateServerDto } from './dto/create-server.dto';
-import { UpdateServerDto } from './dto/update-server.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindUserServerDto } from './dto/find-user-server.dto';
 import { SyncServerChannelsDto } from './dto/sync-server-channels.dto';
+import { UpdateServerSettingsDto } from './dto/update-server-settings.dto';
 
 @Injectable()
 export class ServerService {
@@ -34,7 +34,7 @@ export class ServerService {
     try {
       return await this.prisma.server.findMany({
         where: {
-          id: {
+          discordServerId: {
             in: dto.discordServerId
           }
         }
@@ -176,8 +176,75 @@ export class ServerService {
     }
   }
 
-  update(id: number, updateServerDto: UpdateServerDto) {
-    return `This action updates a #${id} server`;
+  async findByDiscordServerId(discordServerId: string) {
+    try {
+      return await this.prisma.server.findUnique({
+        where: { discordServerId },
+        select: {
+          id: true,
+          name: true,
+          discordServerId: true,
+          discordChannelId: true,
+          discordChannelName: true,
+          botActive: true,
+          botAddedAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      throw new InternalServerErrorException('Failed to fetch server settings.');
+    }
+  }
+
+  async updateSettings(discordServerId: string, dto: UpdateServerSettingsDto) {
+    try {
+      const normalizedName = dto.name?.trim();
+      const normalizedChannelId = dto.discordChannelId?.trim() || null;
+      let normalizedChannelName = normalizedChannelId ? dto.discordChannelName?.trim() || null : null;
+
+      if (normalizedChannelId) {
+        const channel = await this.prisma.serverChannel.findFirst({
+          where: {
+            discordChannelId: normalizedChannelId,
+            server: {
+              discordServerId,
+            },
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        if (!channel) {
+          throw new BadRequestException('Selecione um canal de voz válido para este servidor.');
+        }
+
+        normalizedChannelName = channel.name;
+      }
+
+      return await this.prisma.server.upsert({
+        where: { discordServerId },
+        update: {
+          ...(normalizedName ? { name: normalizedName } : {}),
+          discordChannelId: normalizedChannelId,
+          discordChannelName: normalizedChannelName,
+        },
+        create: {
+          discordServerId,
+          name: normalizedName ?? `Servidor ${discordServerId}`,
+          discordChannelId: normalizedChannelId,
+          discordChannelName: normalizedChannelName,
+        },
+      });
+    } catch (e) {
+      if (e instanceof BadRequestException) {
+        throw e;
+      }
+
+      console.error(e);
+      throw new InternalServerErrorException('Failed to update server settings.');
+    }
   }
 
   remove(id: number) {
