@@ -368,6 +368,27 @@
   gap: var(--spacing-4);
 }
 
+.flagged-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-4);
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flagged-reload-btn {
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: 0.85rem;
+  font-weight: 800;
+  border-radius: var(--radius-full);
+}
+
+.flagged-reload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .flagged-table {
   display: grid;
   gap: var(--spacing-3);

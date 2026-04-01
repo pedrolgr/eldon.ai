@@ -115,6 +115,7 @@ export function ServerPage() {
   const [flaggedMessages, setFlaggedMessages] = useState<FlaggedMessage[]>([]);
   const [flaggedLoading, setFlaggedLoading] = useState(false);
   const [flaggedError, setFlaggedError] = useState<string | null>(null);
+  const [flaggedRefreshToken, setFlaggedRefreshToken] = useState(0);
 
   useEffect(() => {
     if (!server) return;
@@ -255,7 +256,7 @@ export function ServerPage() {
     return () => {
       isActive = false;
     };
-  }, [baseURL, serverId]);
+  }, [baseURL, flaggedRefreshToken, serverId]);
 
   const handleChannelSelect = (event: ChangeEvent<HTMLSelectElement>) => {
     const channelId = event.target.value;
@@ -581,11 +582,22 @@ export function ServerPage() {
         </section>
 
         <section className="flagged-card">
-          <div>
-            <h2 className="config-title">Mensagens sinalizadas</h2>
-            <p className="hero-subtitle">
-              Consulte os trechos classificados como inadequados, o possível palavrão detectado e o áudio original.
-            </p>
+          <div className="flagged-header">
+            <div>
+              <h2 className="config-title">Mensagens sinalizadas</h2>
+              <p className="hero-subtitle">
+                Consulte o que foi dito e classificado como inadequado
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary flagged-reload-btn"
+              onClick={() => setFlaggedRefreshToken((previous) => previous + 1)}
+              disabled={flaggedLoading || !baseURL || !serverId}
+            >
+              <span className="material-symbols-outlined icon-filled">refresh</span>
+              {flaggedLoading ? "Atualizando..." : "Atualizar listagem"}
+            </button>
           </div>
 
           {flaggedLoading ? (
