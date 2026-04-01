@@ -1,9 +1,28 @@
 import { EndBehaviorType, VoiceReceiver, VoiceConnection } from "@discordjs/voice";
+import { Guild } from "discord.js";
 import prism from "prism-media";
-import { transcribeAudio } from "./transcribeAudio";
+import { convertWavToMp3Buffer } from "./convertWavToMp3Buffer";
+import { orchestrateAudio } from "./orchestrateAudio";
 
-export function recordVoiceHandler(connection: VoiceConnection) {
+export function recordVoiceHandler(connection: VoiceConnection, guild: Guild) {
     const receiver: VoiceReceiver = connection.receiver;
+    const usernameCache = new Map<string, string>();
+
+    const resolveDiscordUsername = async (userId: string): Promise<string> => {
+        const cachedUsername = usernameCache.get(userId);
+        if (cachedUsername) {
+            return cachedUsername;
+        }
+
+        try {
+            const member = await guild.members.fetch(userId);
+            const username = member.displayName || member.user.username;
+            usernameCache.set(userId, username);
+            return username;
+        } catch {
+            return userId;
+        }
+    };
 
     receiver.speaking.on("start", (userId: string) => {
         const opusStream = receiver.subscribe(userId, {
@@ -33,10 +52,37 @@ export function recordVoiceHandler(connection: VoiceConnection) {
             try {
                 const pcmBuffer = Buffer.concat(buffers);
                 const wavBuffer = createWavBuffer(pcmBuffer);
-                const file = new File([wavBuffer as any], `recording-${userId}-${Date.now()}.wav`, { type: "audio/wav" });
+                const mp3Buffer = await convertWavToMp3Buffer(wavBuffer);
+                const discordUsername = await resolveDiscordUsername(userId);
+                const discordChannelId = connection.joinConfig.channelId;
 
-                const text = await transcribeAudio(file);
-                if (text) console.log(`Transcription for ${userId}:`, text);
+                if (!discordChannelId) {
+                    console.warn(`[Voice] Missing channel id for guild ${guild.id}. Skipping moderation payload.`);
+                    return;
+                }
+
+                const result = await orchestrateAudio({
+                    discordServerId: guild.id,
+                    discordChannelId,
+                    discordUserId: userId,
+                    discordUsername,
+                    audioMp3Buffer: mp3Buffer,
+                });
+
+                if (!result) {
+                    return;
+                }
+
+                if (result.transcription) {
+                    console.log(`Transcription for ${discordUsername} (${userId}):`, result.transcription);
+                }
+
+                if (result.isInappropriate) {
+                    console.warn(
+                        `Flagged audio from ${discordUsername} (${userId}) in guild ${guild.id}.`,
+                        result.reason ?? "No reason returned",
+                    );
+                }
             } catch (err) {
                 console.error(`Error processing audio for ${userId}:`, err);
             }

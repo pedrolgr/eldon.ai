@@ -376,14 +376,22 @@
 
 .flagged-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 2fr 1fr 0.8fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr 1.3fr 2fr 1.4fr 1fr;
   gap: var(--spacing-3);
   font-size: 0.85rem;
   color: var(--on-surface-variant);
-  min-width: 980px;
+  min-width: 1060px;
+  align-items: center;
+  padding: var(--spacing-3);
+  border: 1px solid rgba(84, 63, 102, 0.25);
+  border-radius: var(--radius-sm);
+  background: rgba(13, 9, 19, 0.45);
 }
 
 .flagged-row.header {
+  border: none;
+  background: transparent;
+  padding: 0;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -396,6 +404,56 @@
   border: 1px dashed rgba(84, 63, 102, 0.5);
   text-align: center;
   color: var(--on-surface-variant);
+}
+
+.flagged-empty-error {
+  color: #ff9b9b;
+}
+
+.flagged-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.flagged-user-name {
+  color: var(--on-surface);
+  font-weight: 700;
+}
+
+.flagged-user-id,
+.flagged-channel-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.78rem;
+}
+
+.flagged-reason-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.flagged-reason-word {
+  color: var(--secondary);
+  font-size: 0.82rem;
+}
+
+.flagged-reason-text {
+  font-size: 0.8rem;
+}
+
+.flagged-original-text {
+  margin: 0;
+  color: var(--on-surface);
+  line-height: 1.45;
+  max-height: 4.5em;
+  overflow-y: auto;
+  padding-right: var(--spacing-1);
+}
+
+.flagged-audio {
+  width: 100%;
+  max-width: 280px;
 }
 
 .server-state {

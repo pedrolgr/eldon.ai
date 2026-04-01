@@ -58,6 +58,7 @@ model FlaggedMessage {
   discordUsername  String    @map("discord_username")
   discordChannelId String    @map("discord_channel_id")
   originalText     String    @map("original_text")
+  audioMp3         Bytes     @map("audio_mp3")
   reason           String?
   reviewed         Boolean   @default(false)
   reviewedById     String?   @map("reviewed_by_id")

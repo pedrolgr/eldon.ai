@@ -31,6 +31,18 @@ interface PersistedServerSettings {
   updatedAt: string;
 }
 
+interface FlaggedMessage {
+  id: string;
+  discordUserId: string;
+  discordUsername: string;
+  discordChannelId: string;
+  originalText: string;
+  reason: string | null;
+  reviewed: boolean;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
 type SaveStatus = "idle" | "saving" | "success" | "error";
 
 function formatDateTime(value: string | null) {
@@ -40,6 +52,38 @@ function formatDateTime(value: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function extractProfanityWords(text: string): string[] {
+  const dictionary = [
+    "arrombado",
+    "buceta",
+    "caralho",
+    "cu",
+    "desgraca",
+    "foda",
+    "foder",
+    "idiota",
+    "merda",
+    "otario",
+    "pau",
+    "piranha",
+    "porra",
+    "puta",
+    "vagabunda",
+    "viado",
+  ];
+
+  const normalizedText = normalizeText(text);
+  const found = dictionary.filter((word) => normalizedText.includes(word));
+  return Array.from(new Set(found));
 }
 
 export function ServerPage() {
@@ -68,6 +112,9 @@ export function ServerPage() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [flaggedMessages, setFlaggedMessages] = useState<FlaggedMessage[]>([]);
+  const [flaggedLoading, setFlaggedLoading] = useState(false);
+  const [flaggedError, setFlaggedError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!server) return;
@@ -158,6 +205,52 @@ export function ServerPage() {
     };
 
     fetchChannels();
+
+    return () => {
+      isActive = false;
+    };
+  }, [baseURL, serverId]);
+
+  useEffect(() => {
+    if (!serverId || !baseURL) return;
+    let isActive = true;
+
+    const fetchFlaggedMessages = async () => {
+      setFlaggedLoading(true);
+      setFlaggedError(null);
+
+      try {
+        const response = await fetch(`${baseURL}/api/server/${serverId}/flagged-messages`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch flagged messages");
+        }
+
+        const data = await response.json();
+
+        if (!isActive) {
+          return;
+        }
+
+        setFlaggedMessages(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        console.error("Failed to fetch flagged messages:", error);
+        setFlaggedMessages([]);
+        setFlaggedError("Não foi possível carregar as mensagens sinalizadas.");
+      } finally {
+        if (isActive) {
+          setFlaggedLoading(false);
+        }
+      }
+    };
+
+    fetchFlaggedMessages();
 
     return () => {
       isActive = false;
@@ -477,6 +570,9 @@ export function ServerPage() {
                 {isSaving ? "Salvando..." : "Salvar configurações"}
               </button>
             </div>
+            {(saveMessage || settingsError) ? (
+              <span className={saveFeedbackClass}>{saveMessage ?? settingsError}</span>
+            ) : null}
             <span className="config-note">
               Depois de salvar, use o comando <code>!start</code> no servidor para o bot entrar no canal de voz
               configurado.
@@ -488,23 +584,55 @@ export function ServerPage() {
           <div>
             <h2 className="config-title">Mensagens sinalizadas</h2>
             <p className="hero-subtitle">
-              Consulte registros de mensagens sinalizadas pelo Eldon. Ainda não há dados sincronizados.
+              Consulte os trechos classificados como inadequados, o possível palavrão detectado e o áudio original.
             </p>
           </div>
 
-          <div className="flagged-table">
-            <div className="flagged-row header">
-              <span>Usuário</span>
-              <span>ID Discord</span>
-              <span>Canal</span>
-              <span>Texto</span>
-              <span>Motivo</span>
-              <span>Revisado</span>
-              <span>Revisado em</span>
-              <span>Criado em</span>
-            </div>
+          {flaggedLoading ? (
+            <div className="flagged-empty">Carregando mensagens sinalizadas...</div>
+          ) : flaggedError ? (
+            <div className="flagged-empty flagged-empty-error">{flaggedError}</div>
+          ) : flaggedMessages.length === 0 ? (
             <div className="flagged-empty">Nenhuma mensagem sinalizada disponível.</div>
-          </div>
+          ) : (
+            <div className="flagged-table">
+              <div className="flagged-row header">
+                <span>Usuário</span>
+                <span>Canal</span>
+                <span>Palavrão / motivo</span>
+                <span>Transcrição</span>
+                <span>Áudio</span>
+                <span>Criado em</span>
+              </div>
+
+              {flaggedMessages.map((message) => {
+                const profanityWords = extractProfanityWords(message.originalText);
+                const profanitySummary = profanityWords.length > 0
+                  ? profanityWords.join(", ")
+                  : "Não identificado";
+                const audioSource = `${baseURL}/api/server/${serverId}/flagged-messages/${message.id}/audio`;
+
+                return (
+                  <div key={message.id} className="flagged-row">
+                    <div className="flagged-user-cell">
+                      <span className="flagged-user-name">{message.discordUsername}</span>
+                      <span className="flagged-user-id">{message.discordUserId}</span>
+                    </div>
+                    <span className="flagged-channel-id">{message.discordChannelId}</span>
+                    <div className="flagged-reason-cell">
+                      <strong className="flagged-reason-word">{profanitySummary}</strong>
+                      <span className="flagged-reason-text">{message.reason ?? "Motivo não informado."}</span>
+                    </div>
+                    <p className="flagged-original-text">{message.originalText || "Transcrição vazia."}</p>
+                    <audio className="flagged-audio" controls preload="none" src={audioSource}>
+                      Seu navegador não suporta reprodução de áudio.
+                    </audio>
+                    <span>{formatDateTime(message.createdAt)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
     </>

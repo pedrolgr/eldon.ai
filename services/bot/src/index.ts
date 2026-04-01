@@ -98,7 +98,7 @@ async function connectToConfiguredChannel(guild: Guild): Promise<{ channelName: 
     }
 
     if (!instrumentedConnections.has(connection)) {
-        recordVoiceHandler(connection);
+        recordVoiceHandler(connection, guild);
         instrumentedConnections.add(connection);
     }
 
